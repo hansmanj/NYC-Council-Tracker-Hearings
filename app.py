@@ -11,6 +11,7 @@ No API key required for read access.
 
 from flask import Flask, jsonify
 from datetime import datetime, timedelta
+from liquid import Environment
 import requests
 import pytz
 import logging
@@ -276,6 +277,68 @@ def hearings():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "ok"}), 200
+
+@app.route("/preview")
+def preview():
+    import os
+    from flask import render_template_string
+
+    # Get live data
+    data = hearings().get_json()
+
+    # Load template
+    template_path = os.path.join(os.path.dirname(__file__), "template.html")
+    with open(template_path, "r") as f:
+        template_str = f.read()
+
+    # Render Liquid template
+    env = Environment()
+    template = env.from_string(template_str)
+    rendered = template.render(variables=data)
+
+    # Wrap in device frame
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body {{
+    background: #161410;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+  }}
+  .device {{
+    background: #cdc8bf;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 0 0 1px #0a0907, 0 3px 0 #0a0907, 0 8px 28px rgba(0,0,0,.65);
+    width: 800px;
+  }}
+  .screen {{
+    background: #f5f3ee;
+    border-radius: 3px;
+    border: 1px solid #b0aba2;
+    width: 100%;
+    height: 480px;
+    overflow: hidden;
+    position: relative;
+  }}
+</style>
+</head>
+<body>
+  <div class="device">
+    <div class="screen">
+      {rendered}
+    </div>
+  </div>
+</body>
+</html>"""
+
+    return html
+```
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080, debug=False)
