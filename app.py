@@ -281,7 +281,6 @@ def health():
 @app.route("/preview")
 def preview():
     import os
-    from flask import render_template_string
 
     # Get live data
     data = hearings().get_json()
